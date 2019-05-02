@@ -146,6 +146,21 @@ integer :: idrec,idrec2
   do it=1,ntmax
     
     hhmm=hhmm_all(mod(it,4)+1)
+  !..sample by local time 
+  !..only 01:30 and 13:30 local time are used
+    if (hhmm .eq. "0000") then
+      long_bg(:)=(/15., 195./)
+      long_ed(:)=(/30., 210./)
+    else if (hhmm .eq. "0600") then
+      long_bg(:)=(/285., 105./)
+      long_ed(:)=(/300., 120./)
+    else if (hhmm .eq. "1200") then
+      long_bg(:)=(/195., 15./)
+      long_ed(:)=(/210., 30./)
+    else if (hhmm .eq. "1800") then
+      long_bg(:)=(/105.,285./)
+      long_ed(:)=(/120.,300./)
+    end if
 
     read(16,rec=it) taumodis(:,:)
     do iz=1,nlev
@@ -214,20 +229,7 @@ integer :: idrec,idrec2
      end do !iz
 
      do i=1,nlon 
-       !only 0130 and 1330 local time only
-       if (hhmm .eq. "0000") then
-         long_bg(:)=(/15., 195./)
-         long_ed(:)=(/30., 210./)
-       else if (hhmm .eq. "0600") then
-         long_bg(:)=(/285., 105./)
-         long_ed(:)=(/300., 120./)
-       else if (hhmm .eq. "1200") then
-         long_bg(:)=(/195., 15./)
-         long_ed(:)=(/210., 30./)
-       else if (hhmm .eq. "1800") then
-         long_bg(:)=(/105.,285./)
-         long_ed(:)=(/120.,300./)
-       end if
+      !only 01:30 and 13:30 local time are used
        if ((long(i) .ge. long_bg(1) .and. long(i) .le. long_ed(1)) .or.  &
            (long(i) .ge. long_bg(2) .and. long(i) .le. long_ed(2))) then
          continue
