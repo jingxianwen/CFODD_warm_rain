@@ -35,14 +35,14 @@ begin
      zebnd_center(iz)=0.5*(zebnd(iz)+zebnd(iz+1))
   end do
 
-  filpath="../cfodd_output/cfodd_br_cosp2/"
+  filpath="../cfodd_output/cfodd_aero_catego_kk/"
 
-  pdfcz1=asciiread(filpath+"cfodd_0-5.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz2=asciiread(filpath+"cfodd_5-10.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz3=asciiread(filpath+"cfodd_10-15.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz4=asciiread(filpath+"cfodd_15-20.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz5=asciiread(filpath+"cfodd_20-25.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz6=asciiread(filpath+"cfodd_25-30.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz1=asciiread(filpath+"cfodd_naer5_0-5.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz2=asciiread(filpath+"cfodd_naer5_5-10.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz3=asciiread(filpath+"cfodd_naer5_10-15.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz4=asciiread(filpath+"cfodd_naer5_15-20.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz5=asciiread(filpath+"cfodd_naer5_20-25.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz6=asciiread(filpath+"cfodd_naer5_25-30.txt",(/num_cotbin,num_zebin/),"float")
 
   ze_del=(ze_max-ze_min)/num_zebin ;ze bin width
   do icot=0,num_cotbin-1
@@ -69,7 +69,7 @@ begin
     end if
     ncnt=sum(pdfcz6(icot,:))
     if (ncnt.gt.0) then
-    pdfcz16(icot,:)=pdfcz16(icot,:)/ncnt/ze_del*100.
+    pdfcz6(icot,:)=pdfcz6(icot,:)/ncnt/ze_del*100.
     end if
   end do
 
