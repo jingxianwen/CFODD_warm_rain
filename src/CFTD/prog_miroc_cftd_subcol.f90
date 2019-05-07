@@ -188,7 +188,7 @@ integer :: idrec,idrec2
   !cnt_cfodd(:,:,:)=0
   cnt_cftd(:,:,:)=0
   !!cntbnd_re(:)=0
-  !!cntbnd_naer(:)=0
+  cntbnd_naer(:)=0
 
  !----start loop over time steps----
   do it=1,ntmax
