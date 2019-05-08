@@ -36,13 +36,13 @@ begin
   end do
 
   filpath="../cfodd_output/cfodd_aero_catego_kk/"
-
-  pdfcz1=asciiread(filpath+"cfodd_naer5_0-5.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz2=asciiread(filpath+"cfodd_naer5_5-10.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz3=asciiread(filpath+"cfodd_naer5_10-15.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz4=asciiread(filpath+"cfodd_naer5_15-20.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz5=asciiread(filpath+"cfodd_naer5_20-25.txt",(/num_cotbin,num_zebin/),"float")
-  pdfcz6=asciiread(filpath+"cfodd_naer5_25-30.txt",(/num_cotbin,num_zebin/),"float")
+  naer="naer4"
+  pdfcz1=asciiread(filpath+"cfodd_"+naer+"_0-5.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz2=asciiread(filpath+"cfodd_"+naer+"_5-10.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz3=asciiread(filpath+"cfodd_"+naer+"_10-15.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz4=asciiread(filpath+"cfodd_"+naer+"_15-20.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz5=asciiread(filpath+"cfodd_"+naer+"_20-25.txt",(/num_cotbin,num_zebin/),"float")
+  pdfcz6=asciiread(filpath+"cfodd_"+naer+"_25-30.txt",(/num_cotbin,num_zebin/),"float")
 
   ze_del=(ze_max-ze_min)/num_zebin ;ze bin width
   do icot=0,num_cotbin-1
@@ -134,7 +134,7 @@ begin
   res@tiXAxisString   = "Reflectivity (dBZ)"
   res@gsnLeftString = "(b)"
   res@gsnCenterString = "Re=10-15 ~F33~m~F21~m"
-  res@tiMainString = "MIROC5(BR68)"
+  res@tiMainString = "MIROC5(KK00)"
   res@tiMainFontHeightF = 0.04
   ;res@tiMainOffsetYF = -0.01
   res@tiXAxisString   = "Reflectivity (dBZ)"

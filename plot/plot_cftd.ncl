@@ -35,7 +35,7 @@ begin
      zebnd_center(iz)=0.5*(zebnd(iz)+zebnd(iz+1))
   end do
 
-  filpath="../cfodd_output/cftd_aero_catego_br/"
+  filpath="../cfodd_output/cftd_aero_catego_kk/"
   naer="naer4"
   pdfcz1=asciiread(filpath+"cftd_naer1.txt",(/num_tempbin,num_zebin/),"float")
   pdfcz2=asciiread(filpath+"cftd_naer2.txt",(/num_tempbin,num_zebin/),"float")

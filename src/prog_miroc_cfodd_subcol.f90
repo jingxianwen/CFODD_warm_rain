@@ -1,4 +1,4 @@
-program prog_nicam_cfodd_jsim
+program prog_miroc_cfodd_subcol
 
 !-------------------------------------
 ! This program does two things:

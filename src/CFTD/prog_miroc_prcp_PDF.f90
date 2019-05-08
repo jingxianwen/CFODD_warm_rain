@@ -1,11 +1,8 @@
-program prog_miroc_cftd_subcol
+program prog_miroc_prcp_PDF
 
 !-------------------------------------
 ! This program does two things:
-! 1. compute the PDF of cloud top Re
-! 2. compute CFODD statistics 
-!   (COT profiles from adiabatic growth
-!    calculation)
+! 1. compute the PDF of precipitation rate
 !-------------------------------------
 
 implicit none
@@ -30,6 +27,20 @@ integer, parameter :: num_naerbnd = 5
 real :: naerbnd(num_naerbnd+1)  ! bands for aerosol number ranges.
 character(5) :: naerbnd_str(num_naerbnd)  ! bands for aerosol number ranges.
 integer :: n
+
+!parameters for num_prcp range.
+integer, parameter :: num_prcpbnd = 150
+real :: prcpbnd(num_prcpbnd+1)   ! band boundary for precipitation rate.
+real :: prcpbndmid(num_prcpbnd)   ! band mid for precipitation rate.
+real :: cnt_prcp(num_naerbnd,num_prcpbnd)  ! count for PDF of precipitation 
+                                          ! rate, for each aerosol range.
+real :: prcp(nlon,nlat)  ! prcp
+real, parameter :: prcpbeg = 0.0  ! mm/h.
+real, parameter :: prcpend = 15.0 ! mm/h. prcp begin and end. the same range
+                                  ! as CloudSat 2c-precip-column product. 
+real, parameter :: prcpdel=0.1
+integer :: iprcpbin
+ 
 
 !input variables
 integer :: landsea_mask(nlon,nlat)
@@ -104,8 +115,8 @@ integer :: idrec,idrec2
 
 
 !----set data and output paths----
-  data_path="../../inputdata/test_br_cosp2/y2502/grd/"
-  out_path="../../cfodd_output/cftd_aero_catego_br/"
+  data_path="../../inputdata/test_kk_cosp2/y2502/grd/"
+  out_path="../../cfodd_output/cftd_aero_catego_kk/"
  
 !----set Re, Tau, and dbz bins for CFODD----
   !!reff_min = 0.0
@@ -142,6 +153,13 @@ integer :: idrec,idrec2
   ! rebnd(i)=rebnd(i-1)+0.25
   ! bndmid(i-1)=(rebnd(i)+rebnd(i-1))*0.5
   !end do
+!----set prcp bins for PDF----
+  do irg=1,num_prcpbnd+1
+    prcpbnd(irg)=prcpbeg+prcpdel*(irg-1)
+  end do
+  do irg=1,num_prcpbnd
+    prcpbndmid(irg)=(prcpbnd(irg)+prcpbnd(irg+1))*0.5
+  end do
   
 !----read land_sea mask data----
   open(10,file="../../utils/landsea_mask.txt")
@@ -177,7 +195,9 @@ integer :: idrec,idrec2
                 status="old",recl=nlat*nlon*4)
   open (15,file=trim(data_path)//"dtauscp.grd",form = "unformatted", access="direct", &
                 status="old",recl=nlat*nlon*4)
-  open (16,file=trim(data_path)//"tauwmodis.grd",form = "unformatted", access="direct", &
+  !!open (16,file=trim(data_path)//"tauwmodis.grd",form = "unformatted", access="direct", &
+  !!              status="old",recl=nlat*nlon*4)
+  open (16,file=trim(data_path)//"prcp.grd",form = "unformatted", access="direct", &
                 status="old",recl=nlat*nlon*4)
   open (17,file=trim(data_path)//"gdzmcp.grd",form = "unformatted", access="direct", &
                 status="old",recl=nlat*nlon*4)
@@ -185,11 +205,12 @@ integer :: idrec,idrec2
                 status="old",recl=nlat*nlon*4)
 
  !----initialize counters----
-  cnt_cftd(:,:,:)=0
-  cntbnd_naer(:)=0
+  !cnt_cftd(:,:,:)=0
+  cnt_prcp(:,:)=0
 
  !----start loop over time steps----
   do it=1,ntmax
+    print*,"it=",it
     if (sample_time) then 
       hhmm=hhmm_all(mod(it,4)+1)
     !..sample by local time
@@ -209,8 +230,10 @@ integer :: idrec,idrec2
       end if
     end if ! sample_time
 
-    read(16,rec=it) taumodis(:,:)
+    read(16,rec=it) prcp(:,:)
     read(180,rec=it) numaes(:,:)
+    prcp=prcp*3600. !kg/m2/s -> mm/h
+
     do iz=1,nlev
       idrec=(it-1)*nlev+iz
       read(11,rec=idrec) qc(iz,:,:)
@@ -221,61 +244,25 @@ integer :: idrec,idrec2
       read(17,rec=idrec) gdzm(iz,:,:)
     end do
     tem(:,:,:)=tem(:,:,:)*0.5
- !----compute tau profile according to adiabatic growth model----
-    !!tauadb(:,:,:)=0.0
-    !!tauadbsgl(:,:,:)=0.0
-    !!do ilat=1,nlat
-    !! do ilon=1,nlon
-    !!   ctop_idx=-1
-    !!   cbase_idx=-1
-    !!   if (taumodis(ilon,ilat) .gt.0) then
-    !!     ! where is cloud base
-    !!     do ilev=1,nlev
-    !!        if (qc(ilev,ilon,ilat) .gt. qliq_thr) then
-    !!           cbase_idx=ilev
-    !!           exit
-    !!        end if
-    !!     end do
-    !!     ! where is cloud top
-    !!     do ilev=nlev,1,-1
-    !!        if (qc(ilev,ilon,ilat) .gt. qliq_thr) then
-    !!           ctop_idx=ilev
-    !!           exit
-    !!        end if
-    !!     end do
-    !!     ! is single layer?
-    !!     if (any(qc(cbase_idx:ctop_idx,ilon,ilat) .lt. qliq_thr )) then
-    !!       continue
-    !!     else
-    !!       cldthk=gdzm(ctop_idx+1,ilon,ilat)-gdzm(cbase_idx,ilon,ilat)
-    !!       do ilev=ctop_idx,cbase_idx,-1 
-    !!         cldhpos=cldthk - (gdzm(ctop_idx+1,ilon,ilat)-gdzm(ilev,ilon,ilat)) 
-    !!         tauadb(ilev,ilon,ilat)=taumodis(ilon,ilat)*(1.0-(cldhpos/cldthk)**(5.0/3.0))
-    !!         tauadbsgl(ilev,ilon,ilat)=tauadb(ilev,ilon,ilat)-tauadb(ilev+1,ilon,ilat)
-    !!       end do 
-    !!     end if
-    !!   end if
-    !! end do !ilon
-    !!end do !ilat
 
   !----loop through sub-columns----
-   do isub=1,nsub
-     print*,"it=",it," isub=",isub
+   !!do isub=1,nsub
+   !!  print*,"it=",it," isub=",isub
 
-     write(idcol,"(i3)") isub
+   !!  write(idcol,"(i3)") isub
 
-     filenm=trim(adjustl(idcol))//".grd"
+   !!  filenm=trim(adjustl(idcol))//".grd"
 
-     open (18,file=trim(data_path)//"dbze"//trim(filenm),form = "unformatted",& 
-              status="old",access="direct", recl=nlat*nlon*4)
-     open (19,file=trim(data_path)//"cfrac"//trim(filenm),form = "unformatted",& 
-              status="old",access="direct", recl=nlat*nlon*4)
+   !!  open (18,file=trim(data_path)//"dbze"//trim(filenm),form = "unformatted",& 
+   !!           status="old",access="direct", recl=nlat*nlon*4)
+   !!  open (19,file=trim(data_path)//"cfrac"//trim(filenm),form = "unformatted",& 
+   !!           status="old",access="direct", recl=nlat*nlon*4)
 
-     do iz=1,nlev
-       idrec2=(it-1)*nlev+iz
-       read(18,rec=idrec2) zetot(iz,:,:)
-       read(19,rec=idrec2) frout(iz,:,:)
-     end do !iz
+   !!  do iz=1,nlev
+   !!    idrec2=(it-1)*nlev+iz
+   !!    read(18,rec=idrec2) zetot(iz,:,:)
+   !!    read(19,rec=idrec2) frout(iz,:,:)
+   !!  end do !iz
 
      do i=1,nlon 
       !only 01:30 and 13:30 local time are used
@@ -315,15 +302,15 @@ integer :: idrec,idrec2
            !!if (tctop .gt. 273.15) then 
                cld_idx=.false.
                do k=1,nlev
-                 !!if (qliq(k) .ge. qliq_thr .and. zetot(k,i,j) .ge. -30.) then
-                 if (qcld(k) .ge. qcld_thr .and. zetot(k,i,j) .ge. -30.) then
+                 !!if (qcld(k) .ge. qcld_thr .and. zetot(k,i,j) .ge. -30.) then
+                 if (qcld(k) .ge. qcld_thr ) then
                    cbase_idx=k
                    exit
                  end if
                end do
                do k=nlev,1,-1
-                 !!if (qliq(k) .ge. qliq_thr .and. zetot(k,i,j) .ge. -30.) then
-                 if (qcld(k) .ge. qcld_thr .and. zetot(k,i,j) .ge. -30. ) then
+                 !!if (qcld(k) .ge. qcld_thr .and. zetot(k,i,j) .ge. -30. ) then
+                 if (qcld(k) .ge. qcld_thr ) then
                     ctop_idx=k
                     cld_idx=.true.
                     exit
@@ -333,8 +320,9 @@ integer :: idrec,idrec2
                if (cld_idx .eqv. .true.) then
                !single layer cloud only
                 sgl_idx=.true.
-                if (any(qcld(cbase_idx:ctop_idx) .lt. qcld_thr ) .or. &
-                    any(zetot(cbase_idx:ctop_idx,i,j) .lt. -30.)) then
+                !!if (any(qcld(cbase_idx:ctop_idx) .lt. qcld_thr ) .or. &
+                !!    any(zetot(cbase_idx:ctop_idx,i,j) .lt. -30.)) then
+                if (any(qcld(cbase_idx:ctop_idx) .lt. qcld_thr )) then
                    sgl_idx=.false.
                 end if
 
@@ -359,6 +347,13 @@ integer :: idrec,idrec2
                      inaerbin=5
                      cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   end if
+                  
+                  iprcpbin=int( (prcp(i,j)-prcpbeg)/prcpdel ) + 1
+                  if (inaerbin .ge.1 .and. inaerbin .le. num_naerbnd .and. &
+                      iprcpbin .ge.1 .and. iprcpbin .le. num_prcpbnd) then
+                    cnt_prcp(inaerbin,iprcpbin)=cnt_prcp(inaerbin,iprcpbin)+1.
+                  end if
+
                   !!cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   !print*,numaes(i,j),inaerbin
                   !pause
@@ -368,55 +363,51 @@ integer :: idrec,idrec2
                   !!   cntbnd_re(bidx)=cntbnd_re(bidx)+1.0
                   !!end if
 
-                  !!tau0=0.0
-                  do k=ctop_idx,cbase_idx,-1
-                  !cot profile
-                     !!tau=tauadbsgl(k,i,j) +tau0
-                     !!tau0=tau
-                  !determin cot bin for CFODD
-                    !!icotbin=int( (tau-tauc_min)/tauc_del ) + 1
-                  !determin temperature bin for CFODD
-                    itempbin=int( (tem(k,i,j)-temp_min)/temp_del ) + 1
-                    !print*,tem(k,i,j),itempbin
-                  !determin dbze bin for CFODD
-                    izebin=int( (zetot(k,i,j)-dbz_min)/dbz_del ) + 1
+                  !!do k=ctop_idx,cbase_idx,-1
+                  !!!determin temperature bin for CFODD
+                  !!  itempbin=int( (tem(k,i,j)-temp_min)/temp_del ) + 1
+                  !!!determin dbze bin for CFODD
+                  !!  izebin=int( (zetot(k,i,j)-dbz_min)/dbz_del ) + 1
   
-                  !count for CFODD
-                    if (inaerbin .ge.1 .and. inaerbin .le. num_naerbnd .and. &
-                        itempbin .ge. 1 .and. itempbin .le. nmax_temp .and. &
-                        izebin .ge. 1 .and. izebin .le. nmax_dbz) then
-                      !cnt_cfodd(irebin,icotbin,izebin)=cnt_cfodd(irebin,icotbin,izebin)+1
-                      cnt_cftd(inaerbin,itempbin,izebin)=cnt_cftd(inaerbin,itempbin,izebin)+1
-                    end if
-                  end do !k
+                  !!!count for CFODD
+                  !!  if (inaerbin .ge.1 .and. inaerbin .le. num_naerbnd .and. &
+                  !!      itempbin .ge. 1 .and. itempbin .le. nmax_temp .and. &
+                  !!      izebin .ge. 1 .and. izebin .le. nmax_dbz) then
+                  !!    cnt_cftd(inaerbin,itempbin,izebin)=cnt_cftd(inaerbin,itempbin,izebin)+1
+                  !!  end if
+                  !!end do !k
                  end if !sgl_idx
                end if !cld_idx
            !!end if !tctop
          end if !landsea_mask
        end do !lat
      end do !lon
-   end do !isub
+   !!end do !isub
 
   end do !it
 
 !----write out counter for CFODD
+  open (50,file=trim(out_path)//"prcp_pdf.txt", &
+         form='formatted')
   do iaer=1,num_naerbnd
    !do i=1,nmax_reff
-    open (50,file=trim(out_path)//'cftd_'//trim(naerbnd_str(iaer))//".txt", &
-         form='formatted')
-     do j=1,nmax_temp
-       write (50,*) cnt_cftd(iaer,j,:)
-     end do
-    close (50)
+    !open (50,file=trim(out_path)//'prcp_'//trim(naerbnd_str(iaer))//".txt", &
+    !     form='formatted')
+    write (50,*) cnt_prcp(iaer,:)
    !end do
   end do
+  close (50)
   
   !-----write out Re PDF----
   !!open(60,file=trim(out_path)//'pdf_cnt_re.txt',form='formatted',status="replace")
   !!open(61,file=trim(out_path)//'pdf_center_re.txt',form='formatted',status="replace")
-  open(62,file=trim(out_path)//'pdf_cnt_naer.txt',form='formatted',status="replace")
+  open(62,file=trim(out_path)//'pdf_prcp_bndmid.txt',form='formatted',status="replace")
+  write(62,*) prcpbndmid(:)
+  close(62)
+  open(63,file=trim(out_path)//'naerbnd.txt',form='formatted',status="replace")
+  write(63,*) naerbnd(:)
+  close(63)
   !!write(60,*) cntbnd_re(:)
   !!write(61,*) bndmid(:)
-  write(62,*) cntbnd_naer(:)
  
 end program

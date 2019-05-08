@@ -1,4 +1,4 @@
-program prog_nicam_cfodd_jsim
+program prog_miroc_cfodd_subcol_adiabatic_aerosol_categ
 
 !-------------------------------------
 ! This program does two things:
@@ -71,7 +71,7 @@ real :: long(nlon) !longitude
 real :: long_bg(2), long_ed(2) ! longitude begin/end for data sample by local time.
 real :: latt_bg(2), latt_ed(2) ! latitude begin/end for data sample by local time.
 logical,parameter :: sample_region=.true.
-logical,parameter :: sample_time=.false.
+logical,parameter :: sample_time=.true.
 real :: latt_rng(2) ! sample latitude range, only if sample_region=.true.
 real :: long_rng(2) ! sample longitude range, only if sample_region=.true.
 
@@ -100,8 +100,8 @@ integer :: idrec,idrec2
 
 
 !----set data and output paths----
-  data_path="../inputdata/test_kk_cosp2/y2502/grd/"
-  out_path="../cfodd_output/cfodd_aero_catego_kk/"
+  data_path="../inputdata/test_br_cosp2/y2502/grd/"
+  out_path="../cfodd_output/cfodd_aero_catego_br/"
  
 !----set Re, Tau, and dbz bins for CFODD----
   reff_min = 0.0
@@ -126,7 +126,7 @@ integer :: idrec,idrec2
   end do
   
 !----set num_aerosol bins for CFODD stratification----
-  naerbnd(:)=(/0.e+11,1.0e+10,3.0e+10,5.0e+10,8.0e+10,1.0e+15/)
+  naerbnd(:)=(/1.e+5,2.0e+11,5.0e+11,8.0e+11,2.0e+12,1.0e+15/)
   naerbnd_str(:)=(/"naer1","naer2","naer3","naer4","naer5"/)
   !bndmid(:)=0.0
   !do i=2,num_rebnd
@@ -153,7 +153,7 @@ integer :: idrec,idrec2
 
 !---set sample region if required---   
   if (sample_region) then 
-   latt_rng(:)=(/0.,40. /) 
+   latt_rng(:)=(/0.,45. /) 
    long_rng(:)=(/60.,140. /)
   end if 
 
@@ -172,7 +172,7 @@ integer :: idrec,idrec2
                 status="old",recl=nlat*nlon*4)
   open (17,file=trim(data_path)//"gdzmcp.grd",form = "unformatted", access="direct", &
                 status="old",recl=nlat*nlon*4)
-  open (18,file=trim(data_path)//"numaes_sprt.grd",form = "unformatted", access="direct", &
+  open (180,file=trim(data_path)//"numcldsp_sprt.grd",form = "unformatted", access="direct", &
                 status="old",recl=nlat*nlon*4)
 
  !----initialize counters----
@@ -182,7 +182,7 @@ integer :: idrec,idrec2
   cntbnd_naer(:)=0
 
  !----start loop over time steps----
-  do it=1,370 !ntmax
+  do it=1,ntmax
     if (sample_time) then 
       hhmm=hhmm_all(mod(it,4)+1)
     !..sample by local time
@@ -203,7 +203,9 @@ integer :: idrec,idrec2
     end if ! sample_time
 
     read(16,rec=it) taumodis(:,:)
-    read(18,rec=it) numaes(:,:)
+    read(180,rec=it) numaes(:,:)
+    !print*,numaes(1:10,50)
+    !cycle
     do iz=1,nlev
       idrec=(it-1)*nlev+iz
       read(11,rec=idrec) qc(iz,:,:)
@@ -292,7 +294,7 @@ integer :: idrec,idrec2
          end if ! sample_region
 
         !over ocean only
-         if (landsea_mask(i,j) .eq. 0) then !0:ocean. 1:land.
+         !if (landsea_mask(i,j) .eq. 0) then !0:ocean. 1:land.
            qliq(:)=qc(:,i,j) !*rho(:,i,j)
            qice(:)=qi(:,i,j) !*rho(:,i,j)
            tctop=-999.9
@@ -332,19 +334,25 @@ integer :: idrec,idrec2
                   !determin Reff bin for CFODD
                   irebin=int( (recld(ctop_idx,i,j)*1.0e6-reff_min)/reff_del ) + 1
                   !determin naer bin for CFODD
+                  inaerbin=-1
                   if ( numaes(i,j) .gt. naerbnd(1) .and. numaes(i,j) .le. naerbnd(2)) then
                      inaerbin=1
+                     cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   else if ( numaes(i,j) .gt. naerbnd(2) .and. numaes(i,j) .le. naerbnd(3)) then
                      inaerbin=2
+                     cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   else if ( numaes(i,j) .gt. naerbnd(3) .and. numaes(i,j) .le. naerbnd(4)) then
                      inaerbin=3
+                     cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   else if ( numaes(i,j) .gt. naerbnd(4) .and. numaes(i,j) .le. naerbnd(5)) then 
                      inaerbin=4
+                     cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   else if ( numaes(i,j) .gt. naerbnd(5) .and. numaes(i,j) .le. naerbnd(6)) then
                      inaerbin=5
+                     cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
                   end if
-                  cntbnd_naer(inaerbin)=cntbnd_naer(inaerbin)+1.0
-                  !print*,numaes(i,j),inaerbin
+                  !print*,i,j,numaes(i,j),inaerbin
+                  !print*,taumodis(i,j),inaerbin
                   !pause
                   !Re PDF:
                   if (recld(ctop_idx,i,j) .gt. 0.0) then
@@ -375,7 +383,7 @@ integer :: idrec,idrec2
                  end if !sgl_idx
                end if !cld_idx
            end if !tctop
-         end if !landsea_mask
+         !end if !landsea_mask
        end do !lat
      end do !lon
    end do !isub

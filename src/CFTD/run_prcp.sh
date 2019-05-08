@@ -1,22 +1,22 @@
 #!/bin/bash
 ### remove exacutable file
-if [ -f "b.out" ]
+if [ -f "prcp.out" ]
 then
-        rm ./b.out
+        rm ./prcp.out
 fi
 
 ### compile and run
-gfortran-7 -o b.out -fconvert=big-endian prog_miroc_cftd_subcol.f90
+gfortran-7 -o prcp.out -fconvert=big-endian prog_miroc_prcp_pdf.f90
 #gfortran-7 -o a.out -fconvert=big-endian prog_miroc_cfodd_subcol_adiabatic_aerosol_categ.f90
 #gfortran-7 -o a.out -fconvert=big-endian prog_miroc_cfodd_subcol_adiabatic.f90
 #gfortran-7 -o a.out -fconvert=big-endian prog_miroc_cfodd_subcol.f90
-if [ -f "b.out" ]
+if [ -f "prcp.out" ]
 then
-        ./b.out
+        ./prcp.out
 fi
 
 ### remove exacutable file
-if [ -f "b.out" ]
+if [ -f "prcp.out" ]
 then
-        rm ./b.out
+        rm ./prcp.out
 fi
